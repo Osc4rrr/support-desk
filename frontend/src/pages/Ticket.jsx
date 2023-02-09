@@ -32,39 +32,39 @@ Modal.setAppElement('#root');
 const Ticket = () => {
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [noteText, setNoteText] = useState('');
-  const { ticket, isLoading, isSuccess, isError, message } = useSelector(
-    (state) => state.tickets
-  );
+  const { ticket } = useSelector((state) => state.tickets);
 
-  const { notes, isLoading: notesIsLoading } = useSelector(
-    (state) => state.notes
-  );
-  const params = useParams();
+  const { notes } = useSelector((state) => state.notes);
   const dispatch = useDispatch();
   const { ticketId } = useParams();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (isError) {
-      toast.error(message);
-    }
-    dispatch(getTicket(ticketId));
-    dispatch(getNotes(ticketId));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isError, message, ticketId]);
+    dispatch(getTicket(ticketId)).unwrap().catch(toast.error);
+    dispatch(getNotes(ticketId)).unwrap().catch(toast.error);
+  }, [ticketId, dispatch]);
 
   //Close Ticket
   const onTicketClose = () => {
-    dispatch(closeTicket(ticketId));
-    toast.success('Ticket Closed');
-    navigate('/tickets');
+    dispatch(closeTicket(ticketId))
+      .unwrap()
+      .then(() => {
+        toast.success('Ticket Closed');
+        navigate('/tickets');
+      })
+      .catch(toast.error);
   };
 
   //Create note submit
   const onNoteSubmit = (e) => {
     e.preventDefault();
-    dispatch(createNote({ noteText, ticketId }));
-    closeModal();
+    dispatch(createNote({ noteText, ticketId }))
+      .unwrap()
+      .then(() => {
+        setNoteText('');
+        closeModal();
+      })
+      .catch(toast.error);
   };
 
   // Open / Close Modal
@@ -75,13 +75,10 @@ const Ticket = () => {
     setModalIsOpen(false);
   };
 
-  if (isLoading || notesIsLoading) {
+  if (!ticket) {
     return <Spinner />;
   }
 
-  if (isError) {
-    return <h3>Something went Wrong!</h3>;
-  }
   return (
     <div className='ticket-page'>
       <header className='ticket-header'>
@@ -143,7 +140,7 @@ const Ticket = () => {
         </form>
       </Modal>
 
-      {notes.map((note) => (
+      {notes?.map((note) => (
         <NoteItem key={note._id} note={note} />
       ))}
 
